@@ -91,6 +91,26 @@ export interface SummaryStats {
   sd?: number;
 }
 
+export interface TeamDocumentData {
+  author: string;
+  config: string;
+  description: string;
+  hash: string;
+  team: {
+    [name: string]: {
+      con: number;
+      weapon: string;
+      refine: number;
+      er: number;
+      talents: Talent;
+    }
+  }
+  dps: number;
+  mode: string;
+  duration: number;
+  target_count: number;
+}
+
 export interface DBItem {
   author: string;
   config: string;

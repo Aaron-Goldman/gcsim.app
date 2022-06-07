@@ -14,7 +14,8 @@ import {
   Tag,
 } from "@blueprintjs/core";
 import { Popover2, Tooltip2 } from "@blueprintjs/popover2";
-import axios from "axios";
+import { getDocs, collection, query, orderBy, limit } from "firebase/firestore/lite";
+import { firestore } from "~src/firebase"
 import React from "react";
 import { Link, useLocation } from "wouter";
 import {
@@ -25,7 +26,7 @@ import {
 import { Viewport } from "~src/Components/Viewport";
 import { IWeapon, WeaponSelect } from "~src/Components/Weapon";
 import { useAppDispatch } from "~src/store";
-import { DBCharInfo, DBItem } from "~src/types";
+import { DBCharInfo, DBItem, TeamDocumentData } from "~src/types";
 import { updateCfg } from "../Sim";
 import { Trans, useTranslation } from "react-i18next";
 import { Disclaimer } from "./Disclaimer";
@@ -254,12 +255,29 @@ export function DB() {
   const [_, setLocation] = useLocation();
 
   React.useEffect(() => {
-    const url = "https://viewer.gcsim.workers.dev/gcsimdb";
-    axios
-      .get(url)
+    const queryByDps = query(collection(firestore, "Teams"), orderBy("dps"), limit(20))
+    getDocs(queryByDps)
       .then((resp) => {
-        console.log(resp.data);
-        let data = resp.data;
+        console.log(resp);
+        const data = resp.docs.map((doc) => {
+          const docData = doc.data() as TeamDocumentData;
+          const character_names = Object.keys(docData.team)
+          const team = character_names.map((name) => ({ name: name, ...docData.team[name] } as DBCharInfo))
+
+          return {
+            author: docData.author,
+            config: docData.config,
+            description: docData.description,
+            hash: docData.hash,
+            dps: docData.dps,
+            mode: docData.mode,
+            duration: docData.duration,
+            target_count: docData.target_count,
+            team: team,
+            viewer_key: doc.id,
+          } as DBItem
+        })
+        console.log(data);
 
         setData(data);
         parseFilterUrl();
