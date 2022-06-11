@@ -222,15 +222,21 @@ export function DBView(props: DBViewProps) {
   );
 }
 
+const getSearchParamData = (key: string) => {
+  const url = new URL(window.location.toString())
+  const data = url.searchParams.get(key);
+  return data ? data.split(",") : [];
+};
+
 export function DB() {
   let { t } = useTranslation();
 
   const [loading, setLoading] = React.useState<boolean>(true);
   const [data, setData] = React.useState<DBItem[]>([]);
   const [openAddChar, setOpenAddChar] = React.useState<boolean>(false);
-  const [charFilter, setCharFilter] = React.useState<string[]>([]);
+  const [charFilter, setCharFilter] = React.useState<string[]>(getSearchParamData("chars"));
   const [openAddWeap, setOpenAddWeap] = React.useState<boolean>(false);
-  const [weapFilter, setWeapFilter] = React.useState<string[]>([]);
+  const [weapFilter, setWeapFilter] = React.useState<string[]>(getSearchParamData("weaps"));
   const [searchString, setSearchString] = React.useState<string>("");
   const [cfg, setCfg] = React.useState<string>("");
   const [keepExistingTeam, setKeepExistingTeam] = React.useState<boolean>(
@@ -254,15 +260,21 @@ export function DB() {
   const [_, setLocation] = useLocation();
 
   React.useEffect(() => {
-    const url = "https://viewer.gcsim.workers.dev/gcsimdb";
-    axios
-      .get(url)
+    const rootUrl = 'http://localhost:8787'
+    const config = {
+      params: {
+        chars: charFilter.join(','),
+        weaps: weapFilter.join(','),
+        limit: 20
+      }
+    }
+    setLoading(true);
+    axios.get(rootUrl + '/teams', config)
       .then((resp) => {
         console.log(resp.data);
         let data = resp.data;
 
         setData(data);
-        parseFilterUrl();
         setLoading(false);
       })
       .catch(function (error) {
@@ -271,7 +283,7 @@ export function DB() {
         setLoading(false);
         setData([]);
       });
-  }, []);
+  }, [charFilter, weapFilter]);
 
   const openInSim = () => {
     dispatch(updateCfg(cfg, keepExistingTeam));
@@ -288,22 +300,6 @@ export function DB() {
     const url = new URL(window.location.toString());
     url.searchParams.set(type, data.join(","));
     window.history.pushState({}, "", url);
-  };
-
-  const parseFilterUrl = () => {
-    const url = new URL(window.location.toString());
-    const chars = getSearchParamData(url, "chars");
-    const weaps = getSearchParamData(url, "weaps");
-
-    console.log(chars);
-
-    if (chars) setCharFilter(chars);
-    if (weaps) setWeapFilter(weaps);
-  };
-
-  const getSearchParamData = (url: URL, key: string) => {
-    const data = url.searchParams.get(key);
-    return data ? data.split(",") : null;
   };
 
   const addCharFilter = (char: ICharacter) => {

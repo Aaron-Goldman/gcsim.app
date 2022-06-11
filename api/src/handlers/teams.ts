@@ -25,7 +25,7 @@ const Teams = async (request) => {
     console.log("all");
     const body = JSON.stringify(await store.all(paginationParams));
 
-    return new Response(body, { headers });
+    return new Response(body, { headers: headers });
   }
   const filterParams = {
     characters,
@@ -34,9 +34,11 @@ const Teams = async (request) => {
     t,
     ...paginationParams,
   };
+  
+  console.log("filter");
   const body = JSON.stringify(await store.filter(filterParams));
 
-  return new Response(body, { headers });
+  return new Response(body, { headers: headers });
 };
 
 export default Teams;

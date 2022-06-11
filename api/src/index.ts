@@ -5,9 +5,19 @@ import Teams from "./handlers/teams";
 
 const router = Router();
 
-router.get("/", () => new Response("test"));
+router.options(
+  "*",
+  () =>
+    new Response(undefined, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "referer, origin, content-type, Access-Control-Allow-Origin",
+      },
+    })
+);
 
-router.get("/api/teams", Teams);
+router.get("/teams", Teams);
 //router.get('/api/teams/:id', Team)
 router.get("*", () => new Response("Not found", { status: 404 }));
 
