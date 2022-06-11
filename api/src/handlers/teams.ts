@@ -1,15 +1,26 @@
-import { Request } from "itty-router";
+import { Request as RouterRequest, RouteHandler } from "itty-router";
 import Store from "../TeamsStore";
+import { DBItem } from "../types";
 
-const Teams = async (request) => {
-  const { params, query, t } = request;
+interface TeamsRequest extends RouterRequest {
+  query: {
+    chars?: string;
+    weaps?: string;
+    s?: string;
+    limit?: string;
+    offset?: string;
+  };
+}
+
+const Teams: RouteHandler<TeamsRequest> = async (request) => {
+  const { query } = request;
 
   const resp = await fetch("https://viewer.gcsim.workers.dev/gcsimdb");
   const data = await resp.json();
-  console.log(data);
-  const store = new Store(data);
 
-  const { searchString } = query;
+  const store = new Store(data as DBItem[]);
+
+  const { s: searchString } = query;
   const characters = query.chars ? query.chars.split(",") : undefined;
   const weapons = query.weaps ? query.weaps.split(",") : undefined;
   const limit = Number(query.limit);
@@ -20,25 +31,25 @@ const Teams = async (request) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Content-type": "application/json",
+    "Cache-Control": "s-maxage=86400",
   };
+
+  let body;
   if (!characters && !weapons) {
     console.log("all");
-    const body = JSON.stringify(await store.all(paginationParams));
-
-    return new Response(body, { headers: headers });
+    body = JSON.stringify(await store.all(paginationParams));
+  } else {
+    const filterParams = {
+      characters,
+      weapons,
+      searchString,
+      ...paginationParams,
+    };
+    console.log("filter");
+    body = JSON.stringify(await store.filter(filterParams));
   }
-  const filterParams = {
-    characters,
-    weapons,
-    searchString,
-    t,
-    ...paginationParams,
-  };
-  
-  console.log("filter");
-  const body = JSON.stringify(await store.filter(filterParams));
 
-  return new Response(body, { headers: headers });
+  return new Response(body, { headers: headers })
 };
 
 export default Teams;
