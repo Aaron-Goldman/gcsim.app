@@ -16,6 +16,7 @@ import {
 import { Popover2, Tooltip2 } from "@blueprintjs/popover2";
 import axios from "axios";
 import React from "react";
+import { useDebounce } from "use-debounce";
 import { Link, useLocation } from "wouter";
 import {
   CharacterSelect,
@@ -144,6 +145,7 @@ const LOCALSTORAGE_DISC_KEY = "gcsim-db-disclaimer-show";
 
 type DBViewProps = {
   db: DBItem[];
+  loading: boolean;
   setCfg: (cfg: string) => void;
 };
 
@@ -160,6 +162,22 @@ export function DBView(props: DBViewProps) {
     ),
   });
 
+  if (props.loading) {
+    return (
+      <div className="m-2 text-center text-lg pt-2">
+        <Spinner />
+        <Trans>db.loading</Trans>
+      </div>
+    );
+  }
+
+  if (props.db.length === 0) {
+    return (
+      <div className="m-2 text-center text-lg">
+        <Trans>db.error_loading_database</Trans>
+      </div>
+    );
+  }
   return (
     <div className="h-full w-full pl-2 pr-2">
       <AutoSizer defaultHeight={100}>
@@ -238,6 +256,7 @@ export function DB() {
   const [openAddWeap, setOpenAddWeap] = React.useState<boolean>(false);
   const [weapFilter, setWeapFilter] = React.useState<string[]>(getSearchParamData("weaps"));
   const [searchString, setSearchString] = React.useState<string>("");
+  const [searchParam] = useDebounce(searchString, 500);
   const [cfg, setCfg] = React.useState<string>("");
   const [keepExistingTeam, setKeepExistingTeam] = React.useState<boolean>(
     () => {
@@ -265,6 +284,7 @@ export function DB() {
       params: {
         chars: charFilter.join(','),
         weaps: weapFilter.join(','),
+        s: searchParam,
         limit: 20
       }
     }
@@ -283,7 +303,7 @@ export function DB() {
         setLoading(false);
         setData([]);
       });
-  }, [charFilter, weapFilter]);
+  }, [charFilter, weapFilter, searchParam]);
 
   const openInSim = () => {
     dispatch(updateCfg(cfg, keepExistingTeam));
@@ -359,26 +379,6 @@ export function DB() {
     localStorage.setItem(LOCALSTORAGE_KEY, keepExistingTeam ? "false" : "true");
     setKeepExistingTeam(!keepExistingTeam);
   };
-
-  if (loading) {
-    return (
-      <div className="m-2 text-center text-lg pt-2">
-        <Spinner />
-        <Trans>db.loading</Trans>
-      </div>
-    );
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="m-2 text-center text-lg">
-        <Trans>db.error_loading_database</Trans>
-      </div>
-    );
-  }
-  data.sort((a, b) => {
-    return b.dps / b.target_count - a.dps / a.target_count;
-  });
 
   const cRows = charFilter.map((e) => {
     return (
@@ -502,7 +502,7 @@ export function DB() {
       </div>
       <div className="border-b-2 mt-2 border-gray-300" />
       <div className="p-2 grow ">
-        <DBView db={n} setCfg={setCfg} />
+        <DBView db={n} setCfg={setCfg} loading={loading} />
       </div>
       <CharacterSelect
         onClose={() => setOpenAddChar(false)}

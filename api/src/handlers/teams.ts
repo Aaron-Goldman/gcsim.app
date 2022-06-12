@@ -35,7 +35,7 @@ const Teams: RouteHandler<TeamsRequest> = async (request) => {
   };
 
   let body;
-  if (!characters && !weapons) {
+  if (!characters && !weapons && !searchString) {
     console.log("all");
     body = JSON.stringify(await store.all(paginationParams));
   } else {
