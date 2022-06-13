@@ -11,7 +11,8 @@ router.options(
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "referer, origin, content-type, Access-Control-Allow-Origin",
+        "Access-Control-Allow-Headers":
+          "referer, origin, content-type, Access-Control-Allow-Origin",
       },
     })
 );

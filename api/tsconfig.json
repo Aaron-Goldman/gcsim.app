@@ -8,8 +8,6 @@
     "alwaysStrict": true,
     "preserveConstEnums": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true,
     "sourceMap": true,
     "types": ["@cloudflare/workers-types"]
   },

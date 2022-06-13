@@ -49,7 +49,7 @@ const Teams: RouteHandler<TeamsRequest> = async (request) => {
     body = JSON.stringify(await store.filter(filterParams));
   }
 
-  return new Response(body, { headers: headers })
+  return new Response(body, { headers: headers });
 };
 
 export default Teams;

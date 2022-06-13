@@ -1,5 +1,3 @@
-import i18next from "i18next";
-import InGameNames from "../../public/locales/IngameNames.json";
 import { DBItem } from "./types";
 
 interface PaginationParams {
@@ -13,12 +11,12 @@ interface FilterParams extends PaginationParams {
 }
 
 const paginate = (data: DBItem[], limit?: number, offset?: number) => {
-    const start = offset || 0;
-    const end = limit ? start + limit : undefined;
-    const hasMore = !!end && end <= data.length
+  const start = offset || 0;
+  const end = limit ? start + limit : undefined;
+  const hasMore = !!end && end <= data.length;
 
-    return {data: data.slice(start, end), hasMore};
-}
+  return { data: data.slice(start, end), hasMore };
+};
 
 export default class TeamsStore {
   data: DBItem[];
@@ -34,9 +32,6 @@ export default class TeamsStore {
   }
 
   async filter(params: FilterParams) {
-    i18next.init({
-      resources: InGameNames,
-    });
     const { characters, weapons, searchString, limit, offset } = params;
 
     const filtered = this.data.filter((entry) => {
@@ -64,16 +59,14 @@ export default class TeamsStore {
         }
       }
 
-      //check something in team matches search string
-      let ss = JSON.stringify(entry);
+      //check description or author matches search string
+      if (searchString) {
+        const searchRegex = new RegExp(searchString, "i");
+        const ss = JSON.stringify(entry);
 
-      entry.team.forEach((c) => {
-        ss += " " + i18next.t("game:character_names." + c.name);
-        ss += " " + i18next.t("game:weapon_names." + c.weapon);
-      });
-
-      if (searchString && !ss.includes(searchString)) {
-        return false;
+        if (!ss.match(searchRegex)) {
+          return false;
+        }
       }
 
       return true;
