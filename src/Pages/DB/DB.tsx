@@ -164,13 +164,9 @@ export function DB() {
   const [error, setError] = React.useState<string>("");
   const [hasMore, setHasMore] = React.useState<boolean>(true);
   const [openAddChar, setOpenAddChar] = React.useState<boolean>(false);
-  const [charFilter, setCharFilter] = React.useState<string[]>(
-    getSearchParamData("chars")
-  );
+  const charFilter = getSearchParamData("chars")
   const [openAddWeap, setOpenAddWeap] = React.useState<boolean>(false);
-  const [weapFilter, setWeapFilter] = React.useState<string[]>(
-    getSearchParamData("weaps")
-  );
+  const weapFilter = getSearchParamData("weaps")
   const [searchString, setSearchString] = React.useState<string>("");
   const [searchParam] = useDebounce(searchString, 500);
   const [cfg, setCfg] = React.useState<string>("");
@@ -226,7 +222,7 @@ export function DB() {
   React.useEffect(() => {
     setData([]);
     fetchFromApi([]);
-  }, [charFilter, weapFilter, searchParam]);
+  }, [window.location.toString(), searchParam]);
 
   const fetchNext = () => {
     fetchFromApi(data);
@@ -260,7 +256,6 @@ export function DB() {
     }
     const next = [...charFilter];
     next.push(key);
-    setCharFilter(next);
 
     updateFilterUrl("chars", next);
   };
@@ -272,7 +267,6 @@ export function DB() {
     }
     const next = [...charFilter];
     next.splice(idx, 1);
-    setCharFilter(next);
 
     updateFilterUrl("chars", next);
   };
@@ -285,7 +279,6 @@ export function DB() {
     }
     const next = [...weapFilter];
     next.push(weap);
-    setWeapFilter(next);
 
     updateFilterUrl("weaps", next);
   };
@@ -297,7 +290,6 @@ export function DB() {
     }
     const next = [...weapFilter];
     next.splice(idx, 1);
-    setWeapFilter(next);
 
     updateFilterUrl("weaps", next);
   };
