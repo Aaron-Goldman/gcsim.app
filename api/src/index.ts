@@ -1,7 +1,6 @@
-import { Request, Router } from "itty-router";
+import { Router } from "itty-router";
 
 import Teams from "./handlers/teams";
-//import Team from './handlers/team';
 
 const router = Router();
 
@@ -18,7 +17,7 @@ router.options(
 );
 
 router.get("/teams", Teams);
-//router.get('/api/teams/:id', Team)
+
 router.get("*", () => new Response("Not found", { status: 404 }));
 
 export default {
