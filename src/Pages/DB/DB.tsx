@@ -30,8 +30,9 @@ import { DBCharInfo, DBItem } from "~src/types";
 import { updateCfg } from "../Sim";
 import { Trans, useTranslation } from "react-i18next";
 import { Disclaimer } from "./Disclaimer";
-import { useVirtual } from "react-virtual";
-import AutoSizer from "react-virtualized-auto-sizer";
+import InfiniteScroll from "react-infinite-scroll-component";
+
+axios.defaults.headers.get["Access-Control-Allow-Origin"] = "*";
 
 function CharTooltip({ char }: { char: DBCharInfo }) {
   let { t } = useTranslation();
@@ -80,7 +81,7 @@ function TeamCard({ row, setCfg }: { row: DBItem; setCfg: () => void }) {
   });
 
   return (
-    <div className="flex flex-row flex-wrap sm:flex-nowrap gap-y-1 w-full m-2 p-2 rounded-md bg-gray-700 place-items-center">
+    <div className="flex flex-row flex-wrap sm:flex-nowrap gap-y-1 m-2 p-2 rounded-md bg-gray-700 place-items-center">
       <div className="flex flex-col sm:basis-1/4 xs:basis-full">
         <div className="grid grid-cols-4">{chars}</div>
         <div className="hidden basis-0 lg:block md:flex-1">
@@ -143,105 +144,15 @@ function TeamCard({ row, setCfg }: { row: DBItem; setCfg: () => void }) {
 const LOCALSTORAGE_KEY = "gcsim-viewer-cpy-cfg-settings";
 const LOCALSTORAGE_DISC_KEY = "gcsim-db-disclaimer-show";
 
-type DBViewProps = {
-  db: DBItem[];
-  loading: boolean;
-  setCfg: (cfg: string) => void;
-};
-
-export function DBView(props: DBViewProps) {
-  const parentRef = React.useRef<HTMLDivElement>(null!);
-  const rowVirtualizer = useVirtual({
-    size: props.db.length,
-    parentRef,
-    keyExtractor: React.useCallback(
-      (index: number) => {
-        return index;
-      },
-      [props.db]
-    ),
-  });
-
-  if (props.loading) {
-    return (
-      <div className="m-2 text-center text-lg pt-2">
-        <Spinner />
-        <Trans>db.loading</Trans>
-      </div>
-    );
-  }
-
-  if (props.db.length === 0) {
-    return (
-      <div className="m-2 text-center text-lg">
-        <Trans>db.error_loading_database</Trans>
-      </div>
-    );
-  }
-  return (
-    <div className="h-full w-full pl-2 pr-2">
-      <AutoSizer defaultHeight={100}>
-        {({ height, width }) => (
-          <div
-            ref={parentRef}
-            style={{
-              minHeight: "100px",
-              height: height,
-              width: width,
-              overflow: "auto",
-              position: "relative",
-            }}
-            id="resize-inner"
-          >
-            <div
-              className="ListInner"
-              style={{
-                // Set the scrolling inner div of the parent to be the
-                // height of all items combined. This makes the scroll bar work.
-                height: `${rowVirtualizer.totalSize}px`,
-                width: width - 50,
-                position: "relative",
-              }}
-            >
-              {
-                // The meat and potatoes, an array of the virtual items
-                // we currently want to render and their index in the original data.
-              }
-              {rowVirtualizer.virtualItems.map((virtualRow) => (
-                <div
-                  key={virtualRow.index}
-                  // ref={virtualRow.measureRef}
-                  ref={(el) => virtualRow.measureRef(el)}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    // Positions the virtual elements at the right place in container.
-                    // minHeight: `${virtualRow.size - 10}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  // id={"virtual-row-"+virtualRow.key}
-                >
-                  <TeamCard
-                    row={props.db[virtualRow.index]}
-                    key={virtualRow.index}
-                    setCfg={() =>
-                      props.setCfg(props.db[virtualRow.index].config)
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </AutoSizer>
-    </div>
-  );
-}
+const DBLoadingIndicator = (
+  <div className="m-2 text-center text-lg pt-2" key="spinner">
+    <Spinner />
+    <Trans>db.loading</Trans>
+  </div>
+);
 
 const getSearchParamData = (key: string) => {
-  const url = new URL(window.location.toString())
+  const url = new URL(window.location.toString());
   const data = url.searchParams.get(key);
   return data ? data.split(",") : [];
 };
@@ -249,12 +160,17 @@ const getSearchParamData = (key: string) => {
 export function DB() {
   let { t } = useTranslation();
 
-  const [loading, setLoading] = React.useState<boolean>(true);
   const [data, setData] = React.useState<DBItem[]>([]);
+  const [error, setError] = React.useState<string>("");
+  const [hasMore, setHasMore] = React.useState<boolean>(true);
   const [openAddChar, setOpenAddChar] = React.useState<boolean>(false);
-  const [charFilter, setCharFilter] = React.useState<string[]>(getSearchParamData("chars"));
+  const [charFilter, setCharFilter] = React.useState<string[]>(
+    getSearchParamData("chars")
+  );
   const [openAddWeap, setOpenAddWeap] = React.useState<boolean>(false);
-  const [weapFilter, setWeapFilter] = React.useState<string[]>(getSearchParamData("weaps"));
+  const [weapFilter, setWeapFilter] = React.useState<string[]>(
+    getSearchParamData("weaps")
+  );
   const [searchString, setSearchString] = React.useState<string>("");
   const [searchParam] = useDebounce(searchString, 500);
   const [cfg, setCfg] = React.useState<string>("");
@@ -278,32 +194,43 @@ export function DB() {
   const dispatch = useAppDispatch();
   const [_, setLocation] = useLocation();
 
-  React.useEffect(() => {
-    const rootUrl = 'http://localhost:8787'
+  const fetchFromApi = (currentData: DBItem[]) => {
+    const rootUrl = "http://localhost:8787";
+    const limit = 20;
     const config = {
       params: {
-        chars: charFilter.join(','),
-        weaps: weapFilter.join(','),
+        chars: charFilter.join(","),
+        weaps: weapFilter.join(","),
         s: searchParam,
-        limit: 20
-      }
-    }
-    setLoading(true);
-    axios.get(rootUrl + '/teams', config)
+        limit: limit,
+        offset: currentData.length,
+      },
+    };
+    axios
+      .get(rootUrl + "/teams", config)
       .then((resp) => {
         console.log(resp.data);
-        let data = resp.data;
+        let responseData = resp.data;
 
-        setData(data);
-        setLoading(false);
+        setData(currentData.concat(responseData.data));
+        setHasMore(responseData.hasMore);
       })
       .catch(function (error) {
         // handle error
         console.log(error);
-        setLoading(false);
-        setData([]);
+        setError(error.toString());
+        setHasMore(false);
       });
+  };
+
+  React.useEffect(() => {
+    setData([]);
+    fetchFromApi([]);
   }, [charFilter, weapFilter, searchParam]);
+
+  const fetchNext = () => {
+    fetchFromApi(data);
+  };
 
   const openInSim = () => {
     dispatch(updateCfg(cfg, keepExistingTeam));
@@ -405,50 +332,12 @@ export function DB() {
       </Tag>
     );
   });
-
-  //filter data
-
-  const n = data.filter((e) => {
-    const team: string[] = [];
-    const weapons: string[] = [];
-
-    e.team.forEach((char) => {
-      team.push(char.name);
-      weapons.push(char.weapon);
-    });
-
-    //team needs to have every character in charFilter array
-    if (charFilter.length > 0) {
-      const ok = charFilter.every((e) => team.includes(e));
-      if (!ok) {
-        return false;
-      }
-    }
-
-    //team needs to have every weapon in weaponFilter array
-    if (weapFilter.length > 0) {
-      const ok = weapFilter.every((e) => weapons.includes(e));
-      if (!ok) {
-        return false;
-      }
-    }
-
-    //check something in team matches search string
-    let ss = JSON.stringify(e);
-    e.team.forEach((c) => {
-      ss += " " + t("game:character_names." + c.name);
-      ss += " " + t("game:weapon_names." + c.weapon);
-    });
-
-    if (searchString !== "" && !ss.includes(searchString)) {
-      return false;
-    }
-
-    return true;
+  const rows = data.map((e, i) => {
+    return <TeamCard row={e} key={i} setCfg={() => setCfg(e.config)} />;
   });
 
   return (
-    <main className="flex flex-col h-full m-2 w-full xs:w-full sm:w-[640px] hd:w-full wide:w-[1160px] ml-auto mr-auto ">
+    <Viewport>
       <div className="flex flex-row items-center">
         <div className="flex flex-row items-center">
           <Icon icon="filter-list" /> <Trans>db.filters</Trans>{" "}
@@ -502,7 +391,21 @@ export function DB() {
       </div>
       <div className="border-b-2 mt-2 border-gray-300" />
       <div className="p-2 grow ">
-        <DBView db={n} setCfg={setCfg} loading={loading} />
+        {error ? (
+          <div className="m-2 text-center text-lg">
+            <Trans>db.error_loading_database</Trans>
+            <div>{error}</div>
+          </div>
+        ) : (
+          <InfiniteScroll
+            dataLength={rows.length}
+            next={fetchNext}
+            hasMore={hasMore}
+            loader={DBLoadingIndicator}
+          >
+            {rows}
+          </InfiniteScroll>
+        )}
       </div>
       <CharacterSelect
         onClose={() => setOpenAddChar(false)}
@@ -544,6 +447,6 @@ export function DB() {
         onClose={() => setShowDisclaimer(false)}
         hideAlways={hideDisclaimer}
       />
-    </main>
+    </Viewport>
   );
 }

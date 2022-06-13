@@ -15,8 +15,9 @@ interface FilterParams extends PaginationParams {
 const paginate = (data: DBItem[], limit?: number, offset?: number) => {
     const start = offset || 0;
     const end = limit ? start + limit : undefined;
+    const hasMore = !!end && end <= data.length
 
-    return data.slice(start, end);
+    return {data: data.slice(start, end), hasMore};
 }
 
 export default class TeamsStore {
